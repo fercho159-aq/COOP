@@ -1,0 +1,210 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Sku {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  brand       String
+  category    String
+  variant     String
+  description String
+  ml          Int      @default(750)
+  unitsPerBox Int      @default(6)
+  convC9L     Float    @default(0.5)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  prices           Price[]
+  costs            Cost[]
+  forecastRecords  ForecastRecord[]
+  sellOutRecords   SellOutRecord[]
+  sellInRecords    SellInRecord[]
+  aopRecords       AopRecord[]
+  inventoryRecords InventoryRecord[]
+
+  @@index([brand])
+  @@index([category])
+}
+
+model Client {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  familyCode   String
+  name         String
+  officialName String?
+  kae          String
+  channel      String?
+  region       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  forecastRecords  ForecastRecord[]
+  sellOutRecords   SellOutRecord[]
+  sellInRecords    SellInRecord[]
+  aopRecords       AopRecord[]
+  inventoryRecords InventoryRecord[]
+
+  @@index([kae])
+  @@index([familyCode])
+}
+
+model Price {
+  id                String   @id @default(cuid())
+  skuId             String
+  sku               Sku      @relation(fields: [skuId], references: [id])
+  listVersion       String
+  effectiveDate     DateTime
+  rspEspecializados Float?
+  rspModerno        Float?
+  priceWithTax      Float?
+  pricePerPcNoTax   Float?
+  pricePerBoxNoTax  Float?
+  price9LNoTax      Float?
+  price9LWithTax    Float?
+  createdAt         DateTime @default(now())
+
+  @@unique([skuId, listVersion])
+  @@index([skuId])
+}
+
+model Cost {
+  id              String   @id @default(cuid())
+  skuId           String
+  sku             Sku      @relation(fields: [skuId], references: [id])
+  listVersion     String
+  costPerBoxNoTax Float
+  costPerBoxTax   Float
+  cost9LNoTax     Float?
+  cost9LWithTax   Float?
+  createdAt       DateTime @default(now())
+
+  @@unique([skuId, listVersion])
+  @@index([skuId])
+}
+
+model SellOutRecord {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id])
+  skuId     String
+  sku       Sku      @relation(fields: [skuId], references: [id])
+  year      Int
+  month     Int
+  bottles   Float    @default(0)
+  c9l       Float    @default(0)
+  inBottles Float    @default(0)
+  invC9l    Float    @default(0)
+  executive String?
+  createdAt DateTime @default(now())
+
+  @@unique([clientId, skuId, year, month])
+  @@index([clientId])
+  @@index([skuId])
+  @@index([year, month])
+}
+
+model SellInRecord {
+  id            String    @id @default(cuid())
+  clientId      String
+  client        Client    @relation(fields: [clientId], references: [id])
+  skuId         String
+  sku           Sku       @relation(fields: [skuId], references: [id])
+  year          Int
+  month         Int
+  orderNumber   String?
+  orderDate     DateTime?
+  pieces        Float     @default(0)
+  boxes         Float     @default(0)
+  subtotalNoTax Float     @default(0)
+  discount      Float     @default(0)
+  totalNoTax    Float     @default(0)
+  c9l           Float     @default(0)
+  createdAt     DateTime  @default(now())
+
+  @@index([clientId])
+  @@index([skuId])
+  @@index([year, month])
+}
+
+model AopRecord {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id])
+  skuId     String
+  sku       Sku      @relation(fields: [skuId], references: [id])
+  year      Int
+  month     Int
+  value     Float    @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([clientId, skuId, year, month])
+  @@index([clientId])
+  @@index([skuId])
+}
+
+model ForecastRecord {
+  id         String   @id @default(cuid())
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id])
+  skuId      String
+  sku        Sku      @relation(fields: [skuId], references: [id])
+  year       Int
+  month      Int
+  version    Int
+  type       String   @default("DP")
+  soForecast Float    @default(0)
+  siForecast Float    @default(0)
+  soInputKae Float?
+  siInputKae Float?
+  isLocked   Boolean  @default(false)
+  modifiedBy String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([clientId, skuId, year, month, version, type])
+  @@index([clientId])
+  @@index([skuId])
+  @@index([year, version])
+  @@index([type])
+}
+
+model InventoryRecord {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id])
+  skuId     String
+  sku       Sku      @relation(fields: [skuId], references: [id])
+  year      Int
+  month     Int
+  quantity  Float    @default(0)
+  bottles   Float    @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([clientId, skuId, year, month])
+  @@index([clientId])
+  @@index([skuId])
+}
+
+model SeasonalWeight {
+  id              String @id @default(cuid())
+  remainingMonths Int
+  targetMonth     Int
+  weight          Float
+
+  @@unique([remainingMonths, targetMonth])
+}
+
+model ForecastConfig {
+  id              String   @id @default(cuid())
+  currentYear     Int      @default(2026)
+  lastClosedMonth Int      @default(1)
+  remainingMonths Int      @default(11)
+  previousYear    Int      @default(2025)
+  updatedAt       DateTime @updatedAt
+}
