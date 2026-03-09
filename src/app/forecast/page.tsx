@@ -62,9 +62,6 @@ export default function ForecastPage() {
   const [filters, setFilters] = useState({ brand: "", kae: "" });
   const [brands, setBrands] = useState<string[]>([]);
   const [kaes, setKaes] = useState<string[]>([]);
-  const [editingCell, setEditingCell] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
-  const [saving, setSaving] = useState(false);
   const [summary, setSummary] = useState<SummaryData | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -112,23 +109,6 @@ export default function ForecastPage() {
     g.soTotal += r.soForecast;
     g.siTotal += r.siForecast;
   }
-
-  const handleSave = async (record: ForecastRow) => {
-    setSaving(true);
-    try {
-      await fetch("/api/forecast", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: record.id, soInputKae: editValue }),
-      });
-      await fetchData();
-      await fetchSummary();
-    } catch (e) {
-      console.error(e);
-    }
-    setSaving(false);
-    setEditingCell(null);
-  };
 
   // Summary computed values
   const forecastYear = summary?.year || 2026;
